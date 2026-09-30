@@ -1,0 +1,306 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap');
+
+:root {
+    /* Paleta — cámbiala aquí para adaptar el HUD a tu servidor */
+    --text: #f4f5f7;
+    --muted: rgba(244, 245, 247, 0.72);
+    --surface: rgba(12, 14, 18, 0.62);
+    --track: rgba(255, 255, 255, 0.12);
+    --danger: #ff5a5f;
+
+    --health: #5ee6a0;
+    --armor: #6aa8ff;
+    --hunger: #f5b85b;
+    --thirst: #5cc8f0;
+    --stamina: #e8e8ec;
+    --oxygen: #9bd8ff;
+    --voice: #e8e8ec;
+    --talking: #5ee6a0;
+    --radio: #f37b7b;
+    --fuel: #f5b85b;
+
+    /* Posición: la calcula Lua a partir del minimapa real */
+    --safe-x: 1.5vh;
+    --safe-y: 1.5vh;
+    --map-top: 20vh;
+
+    /* Escala: 1rem = 12px a 1080p, se adapta a cualquier resolución */
+    font-size: calc(100vh / 90);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: transparent;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    color: var(--text);
+    user-select: none;
+}
+
+#hud {
+    position: absolute;
+    inset: 0;
+    transition: opacity 0.3s ease;
+}
+
+#hud.is-hidden {
+    opacity: 0;
+}
+
+/* ----------------------------------------------------------------------- */
+/* Estado del jugador                                                      */
+/* ----------------------------------------------------------------------- */
+
+.status-area {
+    position: absolute;
+    left: max(var(--safe-x), 1.5vh);
+    bottom: max(var(--safe-y), 1.5vh);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.8rem;
+    transition: bottom 0.35s ease;
+}
+
+#hud.radar-on .status-area {
+    bottom: calc(100vh - var(--map-top) + 0.8rem);
+}
+
+.rings {
+    display: flex;
+    align-items: center;
+}
+
+.ring {
+    position: relative;
+    width: 3.4rem;
+    height: 3.4rem;
+    margin-right: 0.5rem;
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--ring-color);
+    flex-shrink: 0;
+    transition: width 0.25s ease, margin 0.25s ease, opacity 0.25s ease, transform 0.25s ease;
+}
+
+.ring.is-off {
+    width: 0;
+    margin-right: 0;
+    opacity: 0;
+    transform: scale(0.6);
+}
+
+.ring svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.ring circle {
+    fill: none;
+    stroke-width: 2.6;
+}
+
+.ring__track {
+    stroke: var(--track);
+}
+
+.ring__fill {
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-dasharray: 100;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 0.3s ease, stroke 0.3s ease;
+}
+
+.ring .ring__icon {
+    inset: 50% auto auto 50%;
+    width: 1.35rem;
+    height: 1.35rem;
+    transform: translate(-50%, -50%);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.9;
+}
+
+.ring--health  { --ring-color: var(--health); }
+.ring--armor   { --ring-color: var(--armor); }
+.ring--hunger  { --ring-color: var(--hunger); }
+.ring--thirst  { --ring-color: var(--thirst); }
+.ring--stamina { --ring-color: var(--stamina); }
+.ring--oxygen  { --ring-color: var(--oxygen); }
+.ring--voice   { --ring-color: var(--voice); }
+
+.ring--voice .ring__icon { opacity: 0.55; }
+.ring--voice.is-talking  { --ring-color: var(--talking); }
+.ring--voice.is-radio    { --ring-color: var(--radio); }
+.ring--voice.is-talking .ring__icon,
+.ring--voice.is-radio .ring__icon { opacity: 1; }
+
+.ring.is-low {
+    --ring-color: var(--danger);
+    animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    50% { box-shadow: 0 0 0 0.35rem rgba(255, 90, 95, 0.18); }
+}
+
+/* ----------------------------------------------------------------------- */
+/* Ubicación                                                               */
+/* ----------------------------------------------------------------------- */
+
+.location {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    font-size: 1.15rem;
+    font-weight: 600;
+    white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    transition: opacity 0.25s ease;
+}
+
+.location.is-off {
+    opacity: 0;
+}
+
+.location__compass {
+    min-width: 2.4rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.4rem;
+    background: var(--surface);
+    text-align: center;
+    font-weight: 700;
+    text-shadow: none;
+}
+
+.location__zone {
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.location__street:empty,
+.location__zone:empty {
+    display: none;
+}
+
+/* ----------------------------------------------------------------------- */
+/* Vehículo                                                                */
+/* ----------------------------------------------------------------------- */
+
+.vehicle {
+    position: absolute;
+    right: max(var(--safe-x), 2vh);
+    bottom: max(var(--safe-y), 2vh);
+    width: 15rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.55rem;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.vehicle.is-off {
+    opacity: 0;
+    transform: translateY(1rem);
+}
+
+.vehicle__speed {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.vehicle__value {
+    font-size: 4.6rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+}
+
+.vehicle__unit {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.vehicle__row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    transition: opacity 0.25s ease;
+}
+
+.vehicle__row.is-off {
+    opacity: 0;
+}
+
+.vehicle__gear {
+    width: 2rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.vehicle__icon,
+.vehicle__engine {
+    width: 2rem;
+    height: 1.4rem;
+    fill: none;
+    stroke: var(--muted);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+}
+
+.vehicle__engine {
+    position: absolute;
+    top: 0.6rem;
+    left: 0;
+    width: 1.8rem;
+    height: 1.8rem;
+    stroke: var(--danger);
+    transition: opacity 0.25s ease;
+}
+
+.vehicle__engine.is-off {
+    opacity: 0;
+}
+
+.bar {
+    flex: 1;
+    height: 0.35rem;
+    border-radius: 1rem;
+    background: var(--track);
+    overflow: hidden;
+}
+
+.bar__fill {
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: var(--text);
+    transition: width 0.15s linear, background 0.3s ease;
+}
+
+.bar__fill--fuel { background: var(--fuel); }
+.bar__fill--fuel.is-low { background: var(--danger); }
+.bar__fill--rpm.is-high { background: var(--danger); }
